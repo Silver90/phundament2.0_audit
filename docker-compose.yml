@@ -1,0 +1,57 @@
+# Phundament 4 - Local Development Stack
+# ======================================
+
+# Application services
+# --------------------
+
+# container to run one-off commands - a dockerized shell
+appcli:
+  # should be replaced with image, eg. <project_name>_appsrc
+  build: .
+  # host-volume for local development
+  volumes:
+    - '.:/app'
+  links:
+    - 'appnginx:WEB'
+    - 'mariadb:DB'
+  command: 'sh src/run.sh'
+
+# The php-fpm server for interpreting php code
+appfpm:
+  image: phundament/php:5.6-fpm-4.0.0-dev
+  # host-volume for local development
+  volumes:
+    - '.:/app'
+  links:
+    - 'mariadb:DB'
+
+# The nginx server for serving static files directly
+appnginx:
+  image: schmunk42/nginx:1.7
+  links:
+    - 'appfpm:PHPFPM'
+  # host-volume for local development
+  volumes:
+    - '.:/app'
+    #- 'build/nginx/run.sh:/root/run.sh'
+  ports:
+    - '80'
+  environment:
+    VIRTUAL_HOST: '~^dev\.myapp\.'
+
+# Build-container with CLI and source-code
+appsrc:
+  build: .
+  command: 'tail -f /dev/null'
+  # host-volume for local development
+  volumes:
+    - '.:/app'
+
+# Data Services
+# -------------
+mariadb:
+  image: tutum/mariadb:10.1
+  ports:
+    - '3306'
+  environment:
+    MARIADB_PASS: secretadmin

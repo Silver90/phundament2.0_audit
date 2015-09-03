@@ -1,0 +1,69 @@
+appbuilder:
+    build: ../..
+    volumes:
+        - '/docker/runner/builds/project-21:/app'
+appcli:
+    build: ../..
+    command: 'tail -f /dev/null'
+    environment:
+        YII_ENV: test
+    links:
+        - 'appnginx:WEB'
+        - 'mariadb:DB'
+        - 'seleniumhub:HUB'
+    volumes:
+        - '/docker/runner/builds/project-21/tests:/app/tests'
+        - '/docker/runner/builds/project-21/codeception.yml:/app/codeception.yml'
+        - '/docker/runner/ci-reports/phundament/app/tests:/app/tests/codeception/_output'
+        - '/docker/runner/ci-reports/phundament/app/docs:/app/runtime/docs'
+    volumes_from:
+        - appsrc
+appfpm:
+    environment:
+        YII_DEBUG: 1
+        YII_ENV: test
+    image: 'phundament/php:5.6-fpm-4.0.0-dev'
+    links:
+        - 'mariadb:DB'
+    volumes_from:
+        - appsrc
+appnginx:
+    environment:
+        NGINX_ERROR_LOG_LEVEL: notice
+        VIRTUAL_HOST: ~^ci\.myapp\.com
+    image: 'schmunk42/nginx:1.7'
+    links:
+        - 'appfpm:PHPFPM'
+    ports:
+        - '80'
+    volumes_from:
+        - appsrc
+appsrc:
+    build: ../..
+    command: 'tail -f /dev/null'
+    volumes:
+        - /app
+mariadb:
+    environment:
+        MARIADB_PASS: secretadmin
+    image: 'tutum/mariadb:10.1'
+    ports:
+        - '3306'
+seleniumchrome:
+    image: 'selenium/node-chrome-debug:2.46.0'
+    links:
+        - 'appnginx:WEB'
+        - 'seleniumhub:HUB'
+    ports:
+        - '5900'
+seleniumfirefox:
+    image: 'selenium/node-firefox-debug:2.46.0'
+    links:
+        - 'appnginx:WEB'
+        - 'seleniumhub:HUB'
+    ports:
+        - '5900'
+seleniumhub:
+    image: 'selenium/hub:2.46.0'
+    ports:
+        - '4444'
